@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Recipe Suggester</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: #ffffff;
+            border-radius: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            padding: 2.5rem;
+            border: 1px solid #e2e8f0;
+        }
+        .ai-title {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(90deg, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .btn-generate {
+            background-image: linear-gradient(to right, #6b46c1, #a855f7, #6b46c1);
+            background-size: 200% auto;
+            color: white;
+            transition: background-position 0.5s ease, transform 0.2s ease;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+        .btn-generate:hover {
+            background-position: right center;
+            transform: translateY(-2px);
+        }
+        .loader {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .dot {
+            width: 1rem;
+            height: 1rem;
+            background-color: #a855f7;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .dot-1 {
+            animation-delay: -0.32s;
+        }
+        .dot-2 {
+            animation-delay: -0.16s;
+        }
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+        .recipe-block {
+            background-color: #f8fafc;
+            border-radius: 1rem;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+            padding: 2rem;
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+        .recipe-block h3 {
+            font-family: 'Poppins', sans-serif;
+        }
+        .recipe-block ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+        }
+        .recipe-block ol {
+            list-style-type: decimal;
+            padding-left: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="container mx-auto p-8 md:p-12 shadow-xl rounded-3xl">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-center ai-title mb-2 py-2">AI Recipe Suggester 🧑‍🍳🥣</h1>
+        <p class="text-center text-gray-500 mb-8">What ingredients do you have? Let's turn them into a delicious meal!</p>
+        
+        <div class="mb-6">
+            <label for="ingredients" class="block text-gray-700 font-semibold mb-2">List your ingredients (e.g., chicken, rice, soy sauce):</label>
+            <textarea id="ingredients" rows="4" class="w-full p-4 rounded-lg border-2 border-gray-200 focus:outline-none focus:border-purple-500 transition-colors duration-200" placeholder="Enter your ingredients, separated by commas or new lines."></textarea>
+        </div>
+        
+        <div class="mb-6">
+            <label for="language-select" class="block text-gray-700 font-semibold mb-2">Choose Your Recipe Language:</label>
+            <p class="text-sm text-gray-500 mb-2">The recipe will be generated in your selected language.</p>
+            <select id="language-select" class="w-full p-3 rounded-lg border-2 border-gray-200 focus:outline-none focus:border-purple-500 transition-colors duration-200">
+                <option value="English">English</option>
+                <option value="Hindi">Hindi</option>
+                <option value="Spanish">Spanish</option>
+                <option value="French">French</option>
+                <option value="German">German</option>
+                <option value="Japanese">Japanese</option>
+                <option value="Italian">Italian</option>
+                <option value="Chinese">Chinese</option>
+                <option value="Russian">Russian</option>
+                <option value="Portuguese">Portuguese</option>
+                <option value="Tamil">Tamil</option>
+                <option value="Telugu">Telugu</option>
+                <option value="Bengali">Bengali</option>
+                <option value="Marathi">Marathi</option>
+                <option value="Gujarati">Gujarati</option>
+                <option value="Kannada">Kannada</option>
+            </select>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8">
+            <button id="generate-btn" class="btn-generate w-full sm:w-auto px-8 py-3 rounded-full text-lg font-bold">
+                Get Recipe ✨
+            </button>
+        </div>
+
+        <div id="loading" class="hidden flex flex-col justify-center items-center gap-4 py-4 text-gray-500">
+            <div class="loader">
+                <div class="dot dot-1"></div>
+                <div class="dot dot-2"></div>
+                <div class="dot dot-3"></div>
+            </div>
+            <span class="text-lg font-semibold">Cooking up something delicious...</span>
+        </div>
+
+        <div id="recipe-output" class="hidden mt-8 recipe-block">
+            <h2 id="recipe-name" class="text-3xl font-bold text-gray-800 mb-2"></h2>
+            <p id="recipe-description" class="text-gray-600 mb-4 italic"></p>
+            <div id="recipe-content"></div>
+            <div id="sources" class="mt-4 text-sm text-gray-500"></div>
+        </div>
+
+        <div id="error-message" class="hidden mt-8 p-4 bg-red-100 border border-red-400 text-red-700 rounded-xl">
+            <p>An error occurred. Please try again. If the problem persists, try using different ingredients.</p>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // Helper function for exponential backoff
+        async function fetchWithBackoff(url, options, retries = 3, delay = 1000) {
+            try {
+                const response = await fetch(url, options);
+                if (response.status === 429 && retries > 0) {
+                    console.warn(`Rate limit hit, retrying in ${delay}ms...`);
+                    await new Promise(res => setTimeout(res, delay));
+                    return fetchWithBackoff(url, options, retries - 1, delay * 2);
+                }
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response;
+            } catch (error) {
+                if (retries > 0) {
+                    console.warn(`Fetch failed, retrying in ${delay}ms...`, error);
+                    await new Promise(res => setTimeout(res, delay));
+                    return fetchWithBackoff(url, options, retries - 1, delay * 2);
+                }
+                throw error;
+            }
+        }
+
+        document.getElementById('generate-btn').addEventListener('click', async () => {
+            const ingredientsInput = document.getElementById('ingredients').value.trim();
+            const selectedLanguage = document.getElementById('language-select').value;
+            const loading = document.getElementById('loading');
+            const recipeOutput = document.getElementById('recipe-output');
+            const errorMessage = document.getElementById('error-message');
+            const generateBtn = document.getElementById('generate-btn');
+
+            if (ingredientsInput === "") {
+                errorMessage.classList.remove('hidden');
+                errorMessage.innerHTML = '<p>Please enter some ingredients to get a recipe!</p>';
+                recipeOutput.classList.add('hidden');
+                return;
+            }
+
+            loading.classList.remove('hidden');
+            recipeOutput.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            generateBtn.disabled = true;
+
+            // --- Language-specific keywords for parsing ---
+            const langKeywords = {
+                "English": { ingredients: "Ingredients", instructions: "Instructions" },
+                "Hindi": { ingredients: "सामग्री", instructions: "बनाने की विधि" },
+                "Spanish": { ingredients: "Ingredientes", instructions: "Instrucciones" },
+                "French": { ingredients: "Ingrédients", instructions: "Instructions" },
+                "German": { ingredients: "Zutaten", instructions: "Anleitung" },
+                "Japanese": { ingredients: "材料", instructions: "作り方" },
+                "Italian": { ingredients: "Ingredienti", instructions: "Istruzioni" },
+                "Chinese": { ingredients: "配料", instructions: "说明" },
+                "Russian": { ingredients: "Ингредиенты", instructions: "Инструкции" },
+                "Portuguese": { ingredients: "Ingredientes", instructions: "Instruções" },
+                "Tamil": { ingredients: "பொருட்கள்", instructions: "வழிமுறைகள்" },
+                "Telugu": { ingredients: "పదార్థాలు", instructions: "సూచనలు" },
+                "Bengali": { ingredients: "উপকরণ", instructions: "নির্দেশাবলী" },
+                "Marathi": { ingredients: "साहित्य", instructions: "सूचना" },
+                "Gujarati": { ingredients: "સામગ્રી", instructions: "સૂચનાઓ" },
+                "Kannada": { ingredients: "ಪದಾರ್ಥಗಳು", instructions: "ಸೂચನೆಗಳು" }
+            };
+
+            const systemPrompt = `You are a world-class chef and a creative recipe genius. Your task is to generate a recipe based on a list of ingredients provided by the user. Your recipe should be unique, delicious, and easy to follow.
+
+The output should be a single, detailed recipe formatted for easy reading. The recipe must contain the following sections in this exact order, using markdown for formatting:
+
+# [Recipe Name]
+* A short, catchy description of the dish.
+* A clear list of ingredients. For the ingredients provided by the user, assume they have standard quantities. You can suggest additional, common pantry ingredients if necessary (e.g., salt, pepper, oil).
+* Detailed, numbered step-by-step instructions for preparation and cooking.
+
+Please ensure the recipe is comprehensive and ready for someone to cook. Do not include any other text or commentary outside of the formatted recipe content. The entire recipe must be in the ${selectedLanguage} language.`;
+
+            const userQuery = `I have the following ingredients: ${ingredientsInput}.`;
+            const apiKey = ""; // REPLACE WITH YOUR ACTUAL API KEY
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                tools: [{ "google_search": {} }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                }
+            };
+
+            try {
+                const response = await fetchWithBackoff(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const generatedText = candidate.content.parts[0].text;
+                    
+                    const recipeNameElement = document.getElementById('recipe-name');
+                    const recipeDescriptionElement = document.getElementById('recipe-description');
+                    const recipeContentElement = document.getElementById('recipe-content');
+                    recipeContentElement.innerHTML = ''; // Clear previous content
+
+                    // --- NEW, ROBUST PARSING LOGIC BASED ON MARKDOWN AND DYNAMIC KEYWORDS ---
+                    const lines = generatedText.split('\n');
+                    let name = '';
+                    let description = '';
+                    let ingredients = [];
+                    let instructions = [];
+                    let parsingState = 'name'; // 'name', 'description', 'ingredients', 'instructions'
+
+                    const currentKeywords = langKeywords[selectedLanguage] || langKeywords["English"];
+
+                    for (const line of lines) {
+                        const trimmedLine = line.trim();
+                        if (trimmedLine === '') continue;
+
+                        if (trimmedLine.startsWith('# ')) {
+                            name = trimmedLine.substring(2);
+                            parsingState = 'description';
+                        } else if (trimmedLine.toLowerCase().includes(currentKeywords.ingredients.toLowerCase())) {
+                            parsingState = 'ingredients';
+                        } else if (trimmedLine.toLowerCase().includes(currentKeywords.instructions.toLowerCase())) {
+                            parsingState = 'instructions';
+                        } else {
+                            if (parsingState === 'description') {
+                                description += (description.length > 0 ? ' ' : '') + trimmedLine;
+                            } else if (parsingState === 'ingredients') {
+                                ingredients.push(trimmedLine.replace(/^\* /, '').trim());
+                            } else if (parsingState === 'instructions') {
+                                instructions.push(trimmedLine.replace(/^\d+\. /, '').trim());
+                            }
+                        }
+                    }
+
+                    // Render content
+                    recipeNameElement.textContent = name || (selectedLanguage === 'Hindi' ? "जनरेटेड रेसिपी" : "Generated Recipe");
+                    recipeDescriptionElement.textContent = description || "";
+
+                    const renderList = (title, items) => {
+                        if (items.length === 0) return;
+                        const header = document.createElement('h3');
+                        header.className = 'text-xl font-bold text-gray-700 mb-2 mt-4';
+                        header.textContent = title;
+                        
+                        // Add emojis based on title
+                        if (title.toLowerCase().includes('ingredien')) {
+                            header.innerHTML += ' 🥕🍽️';
+                        } else if (title.toLowerCase().includes('instruction') || title.toLowerCase().includes('विधि')) {
+                            header.innerHTML += ' 📝🔥';
+                        }
+                        
+                        recipeContentElement.appendChild(header);
+                        
+                        const list = document.createElement(title === 'Instructions' || currentKeywords.instructions === title ? 'ol' : 'ul');
+                        list.className = `text-gray-800 space-y-1 ${title === 'Instructions' || currentKeywords.instructions === title ? 'list-decimal' : 'list-disc'}`;
+                        
+                        items.forEach(item => {
+                            const li = document.createElement('li');
+                            li.innerHTML = item;
+                            list.appendChild(li);
+                        });
+                        recipeContentElement.appendChild(list);
+                    };
+
+                    renderList(currentKeywords.ingredients, ingredients);
+                    renderList(currentKeywords.instructions, instructions);
+
+                    // Add citations if available
+                    let sourcesHtml = '';
+                    const groundingMetadata = candidate.groundingMetadata;
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                        const sources = groundingMetadata.groundingAttributions
+                            .map(attribution => ({
+                                uri: attribution.web?.uri,
+                                title: attribution.web?.title,
+                            }))
+                            .filter(source => source.uri && source.title);
+                        
+                        if (sources.length > 0) {
+                            sourcesHtml = '<strong>Sources:</strong><ul>' + sources.map(s => `<li><a href="${s.uri}" target="_blank" class="text-blue-500 hover:underline">${s.title}</a></li>`).join('') + '</ul>';
+                        }
+                    }
+                    document.getElementById('sources').innerHTML = sourcesHtml;
+                    
+                    recipeOutput.classList.remove('hidden');
+                } else {
+                    errorMessage.classList.remove('hidden');
+                    console.error('Unexpected API response structure:', result);
+                }
+            } catch (error) {
+                console.error("Error generating recipe:", error);
+                errorMessage.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
